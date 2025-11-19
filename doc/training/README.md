@@ -8,15 +8,34 @@
 
 ---
 
-## 📚 Course Overview
+## 🚀 Quick Start
+
+**New to USP? Start here!**
+
+### ⚡ 30-Minute Quick Start
+Get your first LoRaWAN device working in under 30 minutes!
+- **[Quick Start Tutorial](Quick_Start_Tutorial.md)** - Fastest path to success
+- Perfect for: Complete beginners, evaluation, demos
+
+### 📖 Comprehensive Setup
+Detailed environment setup and first project creation:
+- **[Getting Started Guide](Getting_Started_Guide.md)** - Complete installation guide
+- Covers: All platforms, troubleshooting, custom applications
+- Perfect for: Production development, understanding the platform
+
+---
+
+## 📚 Core Training Courses
 
 This comprehensive training series covers all aspects of the **Universal Software Platform (USP)** for Zephyr, from LoRa/LoRaWAN fundamentals to advanced multiprotocol development. Each course includes:
 
 - ✅ **Detailed theoretical content** with technical deep dives
-- 🔬 **Hands-on labs** with step-by-step instructions
+- 🔬 **Hands-on labs** with **complete solutions** provided
 - 📝 **Assessments** after each section to verify understanding
 - 💡 **Real-world examples** from the USP codebase
 - 🎯 **Learning objectives** clearly defined per module
+
+**📘 [Lab Solutions Available](Lab_Solutions.md)** - Complete solutions for all 30+ labs!
 
 ---
 
@@ -265,6 +284,44 @@ This comprehensive training series covers all aspects of the **Universal Softwar
 - Lab 6.6: Analyze and debug transaction conflicts
 
 **Assessment:** 60-question quiz + final capstone project
+
+---
+
+## 📖 Supplementary Guides
+
+Beyond the core curriculum, these guides provide additional resources and solutions:
+
+### **Complete Lab Solutions**
+**[Lab Solutions](Lab_Solutions.md)** - Detailed solutions for all 30+ labs
+- Copy-paste ready code for every lab
+- Expected output and troubleshooting
+- Complete working examples with device tree configs
+- Power consumption analysis
+- Network server setup instructions
+
+### **Sensor Integration**
+**[Sensor Integration Guide](Sensor_Integration_Guide.md)** - Add sensors to your LoRaWAN devices
+- **BME680 Complete Example:** Temperature, humidity, pressure, gas sensing
+- **I2C Sensor Template:** For custom I2C sensors
+- **SPI Sensor Template:** For SPI-based sensors
+- **Analog/ADC Template:** For voltage-based sensors
+- **Best Practices:** Power management, error handling, calibration
+- **Payload Encoding:** CayenneLPP examples, custom formats
+
+### **Environment Setup**
+- **[Getting Started Guide](Getting_Started_Guide.md)** - Comprehensive installation (30+ pages)
+- **[Quick Start Tutorial](Quick_Start_Tutorial.md)** - First device in 30 minutes
+- Platform-specific instructions (Linux, macOS, Windows/WSL2)
+- Hardware setup and connections
+- Creating custom applications from scratch
+- Troubleshooting common issues
+
+### **Training Enhancements Summary**
+**[Training Enhancements Summary](Training_Enhancements_Summary.md)** - Overview of all materials
+- What's new in the enhanced training
+- Integration with core courses
+- Learning paths by skill level
+- File structure and navigation guide
 
 ---
 
