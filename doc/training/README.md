@@ -308,6 +308,16 @@ Beyond the core curriculum, these guides provide additional resources and soluti
 - **Best Practices:** Power management, error handling, calibration
 - **Payload Encoding:** CayenneLPP examples, custom formats
 
+### **Smart City Applications**
+**[Smart City Applications](Smart_City_Applications.md)** - Production-ready smart city deployments
+- **Lab 1: Smart Street Lighting** - Power monitoring and remote control with ADE7953 energy meter
+- **Lab 2: Smart Parking** - Vehicle detection using MMC5983MA magnetometer
+- **Lab 3: Smart Waste Management** - Fill level monitoring with VL53L1X ToF sensor and solar power
+- **Lab 4: Smart Metering** - Multi-utility pulse counting (gas, water, electricity) with hourly reporting
+- Complete hardware specifications, BOMs, and device tree configurations
+- Cloud integration examples (TTN, AWS IoT Core, Grafana)
+- Deployment guides and troubleshooting
+
 ### **Environment Setup**
 - **[Getting Started Guide](Getting_Started_Guide.md)** - Comprehensive installation (30+ pages)
 - **[Quick Start Tutorial](Quick_Start_Tutorial.md)** - First device in 30 minutes
