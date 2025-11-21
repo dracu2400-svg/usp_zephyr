@@ -1,0 +1,627 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{tikz}
+
+% TikZ libraries
+\usetikzlibrary{shapes,arrows,positioning}
+
+% Code listing style
+\lstset{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=2
+}
+
+% Color boxes
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{objectivebox}{
+    colback=blue!5!white,
+    colframe=blue!75!black,
+    title=Lab Objectives,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{prereqbox}{
+    colback=yellow!5!white,
+    colframe=yellow!75!black,
+    title=Prerequisites,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{solutionbox}{
+    colback=green!5!white,
+    colframe=green!75!black,
+    title=Solution,
+    fonttitle=\bfseries,
+    breakable
+}
+
+\newtcolorbox{warningbox}{
+    colback=red!5!white,
+    colframe=red!75!black,
+    title=Warning,
+    fonttitle=\bfseries
+}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{USP Training Course 1}
+\rhead{Lab 1.1: Basic LoRaWAN Join}
+\cfoot{\thepage}
+
+\title{
+    \textbf{Lab 1.1: Basic LoRaWAN Join}\\
+    \large Course 1: LoRa \& LoRaWAN Fundamentals
+}
+\author{USP Training Series}
+\date{}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{fancy}
+
+% ============================================================================
+\section{Lab Overview}
+% ============================================================================
+
+\begin{objectivebox}
+By the end of this lab, you will be able to:
+\begin{itemize}
+    \item Configure LoRaWAN credentials (DevEUI, JoinEUI, AppKey)
+    \item Perform OTAA (Over-The-Air Activation) join procedure
+    \item Understand the join accept message
+    \item Monitor join status through serial console
+    \item Verify device registration on network server
+\end{itemize}
+\end{objectivebox}
+
+\vspace{0.5cm}
+
+\begin{prereqbox}
+\textbf{Required Knowledge:}
+\begin{itemize}
+    \item Basic understanding of LoRaWAN architecture
+    \item Familiarity with Zephyr RTOS build system
+    \item Access to LoRaWAN network server (TTN, ChirpStack, etc.)
+\end{itemize}
+
+\vspace{0.3cm}
+
+\textbf{Hardware Required:}
+\begin{itemize}
+    \item Xiao nRF54L15 development board
+    \item LR1120 LoRa shield
+    \item USB cable for programming and serial console
+    \item LoRaWAN gateway within range
+\end{itemize}
+
+\vspace{0.3cm}
+
+\textbf{Software Required:}
+\begin{itemize}
+    \item Zephyr SDK installed
+    \item West tool configured
+    \item Serial terminal (screen, minicom, or PuTTY)
+\end{itemize}
+\end{prereqbox}
+
+% ============================================================================
+\section{Lab Duration}
+% ============================================================================
+
+\textbf{Estimated Time:} 45 minutes
+
+\begin{itemize}
+    \item Setup and configuration: 15 minutes
+    \item Implementation: 20 minutes
+    \item Testing and verification: 10 minutes
+\end{itemize}
+
+% ============================================================================
+\section{Background}
+% ============================================================================
+
+\subsection{OTAA Join Procedure}
+
+LoRaWAN supports two activation methods:
+\begin{itemize}
+    \item \textbf{OTAA (Over-The-Air Activation):} Device performs join procedure to obtain session keys
+    \item \textbf{ABP (Activation By Personalization):} Session keys pre-configured in device
+\end{itemize}
+
+OTAA is the recommended method for production deployments because:
+\begin{itemize}
+    \item More secure (keys derived from join procedure)
+    \item Supports key rotation
+    \item Enables device mobility between networks
+\end{itemize}
+
+\subsection{Join Request Message}
+
+The join request contains:
+\begin{itemize}
+    \item \textbf{JoinEUI} (formerly AppEUI): 64-bit identifier for join server
+    \item \textbf{DevEUI}: 64-bit globally unique device identifier
+    \item \textbf{DevNonce}: 16-bit random value (prevents replay attacks)
+\end{itemize}
+
+The message is encrypted with the AppKey.
+
+\subsection{Join Accept Message}
+
+Upon successful join, the network server responds with:
+\begin{itemize}
+    \item \textbf{JoinNonce}: Random value from network
+    \item \textbf{NetID}: Network identifier
+    \item \textbf{DevAddr}: Device address (for this session)
+    \item \textbf{DLSettings}: Downlink settings (RX1 delay, RX2 data rate)
+    \item \textbf{RXDelay}: RX window timing
+\end{itemize}
+
+From this, the device derives:
+\begin{itemize}
+    \item \textbf{NwkSKey}: Network session key (for MAC commands)
+    \item \textbf{AppSKey}: Application session key (for payload encryption)
+\end{itemize}
+
+% ============================================================================
+\section{Lab Instructions}
+% ============================================================================
+
+\subsection{Step 1: Register Device on Network Server}
+
+\begin{enumerate}
+    \item Log in to your LoRaWAN network server (e.g., The Things Network)
+    \item Create a new application (if not already exists)
+    \item Add a new end device:
+    \begin{itemize}
+        \item Activation mode: OTAA
+        \item LoRaWAN version: 1.0.4
+        \item Regional Parameters: EU868 (or your region)
+        \item DevEUI: Copy from device label or generate
+        \item JoinEUI: Use your application's JoinEUI
+        \item AppKey: Generate a new 128-bit key
+    \end{itemize}
+    \item Save the credentials for the next step
+\end{enumerate}
+
+\subsection{Step 2: Configure Device Credentials}
+
+Navigate to your project directory and edit the configuration file:
+
+\begin{lstlisting}[language=bash]
+cd samples/lora/lorawan_hello
+\end{lstlisting}
+
+Create or edit \texttt{prj.conf}:
+
+\begin{lstlisting}[language=bash]
+# LoRaWAN Configuration
+CONFIG_LORAWAN=y
+CONFIG_LORAWAN_REGION_EU868=y
+CONFIG_LORAWAN_ACTIVATION_OTAA=y
+
+# Enable logging
+CONFIG_LOG=y
+CONFIG_LORAWAN_LOG_LEVEL_DBG=y
+\end{lstlisting}
+
+Edit \texttt{src/main.c} to add your credentials (see Solution section).
+
+\subsection{Step 3: Build the Firmware}
+
+\begin{lstlisting}[language=bash]
+west build -b xiao_nrf54l15 samples/lora/lorawan_hello
+\end{lstlisting}
+
+\subsection{Step 4: Flash the Device}
+
+\begin{lstlisting}[language=bash]
+west flash
+\end{lstlisting}
+
+\subsection{Step 5: Monitor Serial Output}
+
+Open a serial terminal:
+
+\begin{lstlisting}[language=bash]
+# Linux/macOS
+screen /dev/ttyUSB0 115200
+
+# Or use minicom
+minicom -D /dev/ttyUSB0 -b 115200
+\end{lstlisting}
+
+\subsection{Step 6: Observe Join Procedure}
+
+You should see output similar to:
+
+\begin{lstlisting}
+[00:00:00.100,000] <inf> lorawan: LoRaWAN stack initialized
+[00:00:00.150,000] <inf> lorawan: Starting OTAA join procedure
+[00:00:05.230,000] <inf> lorawan: Join request sent
+[00:00:10.450,000] <inf> lorawan: Join accept received
+[00:00:10.451,000] <inf> lorawan: Network joined successfully!
+[00:00:10.452,000] <inf> lorawan: DevAddr: 0x260B1234
+\end{lstlisting}
+
+\subsection{Step 7: Verify on Network Server}
+
+\begin{enumerate}
+    \item Return to network server console
+    \item Navigate to your device page
+    \item Check "Live Data" or "Events" tab
+    \item Verify join request was received
+    \item Confirm join accept was sent
+    \item Device should show as "Active" or "Online"
+\end{enumerate}
+
+% ============================================================================
+\section{Solution}
+% ============================================================================
+
+\begin{solutionbox}
+
+\subsection{Complete main.c Implementation}
+
+\begin{lstlisting}
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/lorawan/lorawan.h>
+
+LOG_MODULE_REGISTER(lab_1_1, LOG_LEVEL_INF);
+
+/* LoRaWAN Credentials - REPLACE WITH YOUR OWN */
+#define LORAWAN_DEV_EUI    { 0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x01 }
+#define LORAWAN_JOIN_EUI   { 0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x00 }
+#define LORAWAN_APP_KEY    { 0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x00 }
+
+static uint8_t dev_eui[] = LORAWAN_DEV_EUI;
+static uint8_t join_eui[] = LORAWAN_JOIN_EUI;
+static uint8_t app_key[] = LORAWAN_APP_KEY;
+
+static struct lorawan_join_config join_cfg = {
+    .mode = LORAWAN_ACT_OTAA,
+    .dev_eui = dev_eui,
+    .otaa = {
+        .join_eui = join_eui,
+        .app_key = app_key,
+        .nwk_key = app_key,  // For LoRaWAN 1.0.x
+    }
+};
+
+/* LoRaWAN downlink callback */
+static void dl_callback(uint8_t port, bool data_pending,
+                       int16_t rssi, int8_t snr,
+                       uint8_t len, const uint8_t *data)
+{
+    LOG_INF("Downlink received:");
+    LOG_INF("  Port: %d", port);
+    LOG_INF("  RSSI: %d dBm", rssi);
+    LOG_INF("  SNR: %d dB", snr);
+    LOG_INF("  Length: %d bytes", len);
+
+    if (len > 0) {
+        LOG_HEXDUMP_INF(data, len, "Payload");
+    }
+}
+
+/* LoRaWAN datarate changed callback */
+static void dr_changed_callback(enum lorawan_datarate dr)
+{
+    LOG_INF("Datarate changed to: DR%d", dr);
+}
+
+int main(void)
+{
+    int ret;
+    const struct device *lora_dev;
+
+    LOG_INF("==============================================");
+    LOG_INF("Lab 1.1: Basic LoRaWAN Join");
+    LOG_INF("==============================================");
+
+    /* Get LoRa device */
+    lora_dev = DEVICE_DT_GET(DT_ALIAS(lora0));
+    if (!device_is_ready(lora_dev)) {
+        LOG_ERR("LoRa device not ready");
+        return -1;
+    }
+
+    LOG_INF("LoRa device ready");
+
+    /* Initialize LoRaWAN stack */
+    ret = lorawan_start();
+    if (ret < 0) {
+        LOG_ERR("Failed to start LoRaWAN stack: %d", ret);
+        return ret;
+    }
+
+    LOG_INF("LoRaWAN stack started");
+
+    /* Register callbacks */
+    struct lorawan_downlink_cb downlink_cb = {
+        .port = LW_RECV_PORT_ANY,
+        .cb = dl_callback
+    };
+    lorawan_register_downlink_callback(&downlink_cb);
+    lorawan_register_dr_changed_callback(dr_changed_callback);
+
+    LOG_INF("Callbacks registered");
+
+    /* Perform OTAA join */
+    LOG_INF("Starting OTAA join procedure...");
+    ret = lorawan_join(&join_cfg);
+    if (ret < 0) {
+        LOG_ERR("Join failed: %d", ret);
+        return ret;
+    }
+
+    LOG_INF("Join request sent, waiting for accept...");
+
+    /* Wait for join to complete */
+    while (!lorawan_is_joined()) {
+        k_sleep(K_SECONDS(1));
+    }
+
+    LOG_INF("==============================================");
+    LOG_INF("SUCCESS: Network joined!");
+    LOG_INF("==============================================");
+
+    /* Get and display DevAddr */
+    uint32_t dev_addr;
+    lorawan_get_dev_addr(&dev_addr);
+    LOG_INF("Assigned DevAddr: 0x%08X", dev_addr);
+
+    /* Keep application running */
+    while (1) {
+        k_sleep(K_SECONDS(60));
+        LOG_INF("Device active, joined to network");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{Build Configuration (prj.conf)}
+
+\begin{lstlisting}[language=bash]
+# LoRaWAN Configuration
+CONFIG_LORAWAN=y
+CONFIG_LORAWAN_REGION_EU868=y
+CONFIG_LORAWAN_ACTIVATION_OTAA=y
+
+# Enable logging
+CONFIG_LOG=y
+CONFIG_LORAWAN_LOG_LEVEL_DBG=y
+CONFIG_LOG_BUFFER_SIZE=2048
+
+# Network stack
+CONFIG_NETWORKING=y
+CONFIG_NET_L2_LORAWAN=y
+
+# Increase stack sizes
+CONFIG_MAIN_STACK_SIZE=2048
+CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE=2048
+\end{lstlisting}
+
+\end{solutionbox}
+
+% ============================================================================
+\section{Expected Output}
+% ============================================================================
+
+When the device successfully joins, you should see:
+
+\begin{lstlisting}
+==============================================
+Lab 1.1: Basic LoRaWAN Join
+==============================================
+[00:00:00.100] <inf> lab_1_1: LoRa device ready
+[00:00:00.105] <inf> lab_1_1: LoRaWAN stack started
+[00:00:00.110] <inf> lab_1_1: Callbacks registered
+[00:00:00.115] <inf> lab_1_1: Starting OTAA join procedure...
+[00:00:00.120] <inf> lab_1_1: Join request sent, waiting...
+[00:00:05.234] <inf> lorawan: TX: Join Request
+[00:00:05.235] <inf> lorawan: Frequency: 868.1 MHz
+[00:00:05.236] <inf> lorawan: DR: SF12BW125
+[00:00:10.567] <inf> lorawan: RX: Join Accept
+[00:00:10.568] <inf> lorawan: Network joined
+==============================================
+SUCCESS: Network joined!
+==============================================
+[00:00:10.570] <inf> lab_1_1: Assigned DevAddr: 0x260B1234
+[00:01:10.570] <inf> lab_1_1: Device active, joined to network
+\end{lstlisting}
+
+% ============================================================================
+\section{Troubleshooting}
+% ============================================================================
+
+\subsection{Join Request Not Received by Gateway}
+
+\begin{warningbox}
+\textbf{Symptoms:} No join request appears on network server
+
+\textbf{Possible Causes:}
+\begin{itemize}
+    \item Gateway out of range
+    \item Incorrect frequency plan (EU868 vs US915)
+    \item Antenna not connected
+    \item Radio not configured properly
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{itemize}
+    \item Check gateway status and location
+    \item Verify regional parameters match gateway
+    \item Ensure antenna is securely connected
+    \item Check device tree configuration for radio
+\end{itemize}
+\end{warningbox}
+
+\subsection{Join Accept Not Received}
+
+\begin{warningbox}
+\textbf{Symptoms:} Join request sent but no accept received
+
+\textbf{Possible Causes:}
+\begin{itemize}
+    \item Incorrect credentials (DevEUI, JoinEUI, AppKey)
+    \item RX window timing issues
+    \item Device not registered on network server
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{itemize}
+    \item Double-check all credentials match network server
+    \item Verify device is registered and enabled
+    \item Check RX window configuration
+    \item Ensure AppKey is correct (case-sensitive)
+\end{itemize}
+\end{warningbox}
+
+\subsection{Build Errors}
+
+\begin{warningbox}
+\textbf{Common Build Issues:}
+\begin{itemize}
+    \item Missing \texttt{CONFIG\_LORAWAN=y} in prj.conf
+    \item Incorrect board name
+    \item Missing Zephyr modules
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{itemize}
+    \item Clean build: \texttt{west build -t pristine}
+    \item Update Zephyr: \texttt{west update}
+    \item Check board support: \texttt{west boards | grep xiao}
+\end{itemize}
+\end{warningbox}
+
+% ============================================================================
+\section{Deliverables}
+% ============================================================================
+
+Upon completion of this lab, you should submit:
+
+\begin{enumerate}[itemsep=10pt]
+    \item \textbf{Source Code}
+    \begin{itemize}
+        \item Complete \texttt{main.c} with your credentials
+        \item \texttt{prj.conf} configuration file
+    \end{itemize}
+
+    \item \textbf{Serial Console Log}
+    \begin{itemize}
+        \item Full output showing successful join
+        \item Include timestamps
+        \item Highlight DevAddr assigned
+    \end{itemize}
+
+    \item \textbf{Network Server Screenshot}
+    \begin{itemize}
+        \item Device showing as "Active" or "Online"
+        \item Join request/accept visible in events
+        \item DevAddr matches console output
+    \end{itemize}
+
+    \item \textbf{Lab Report}
+    \begin{itemize}
+        \item Brief description of procedure followed
+        \item Any issues encountered and how resolved
+        \item Time taken for join procedure
+        \item RSSI and SNR values observed
+    \end{itemize}
+\end{enumerate}
+
+% ============================================================================
+\section{Additional Challenges}
+% ============================================================================
+
+\subsection{Challenge 1: Analyze Join Timing}
+
+Measure the time from join request to join accept:
+\begin{itemize}
+    \item Add timestamp logging
+    \item Calculate total join time
+    \item Identify RX1 vs RX2 window used
+\end{itemize}
+
+\subsection{Challenge 2: Multiple Join Attempts}
+
+Modify the code to handle join failures:
+\begin{itemize}
+    \item Implement exponential backoff
+    \item Retry up to 3 times
+    \item Log each attempt
+\end{itemize}
+
+\subsection{Challenge 3: Display Join Parameters}
+
+Extract and display join accept parameters:
+\begin{itemize}
+    \item RX1 delay
+    \item RX2 data rate
+    \item RX2 frequency
+    \item CFList (if present)
+\end{itemize}
+
+% ============================================================================
+\section{References}
+% ============================================================================
+
+\begin{itemize}
+    \item LoRaWAN 1.0.4 Specification (LoRa Alliance)
+    \item LoRaWAN Regional Parameters (RP002-1.0.4)
+    \item Zephyr LoRaWAN API Documentation
+    \item Course 1 Presentation Slides
+\end{itemize}
+
+% ============================================================================
+\section{Next Steps}
+% ============================================================================
+
+After completing this lab, you should proceed to:
+\begin{itemize}
+    \item \textbf{Lab 1.2:} Send and receive messages
+    \item \textbf{Lab 1.3:} Implement confirmed uplinks
+    \item \textbf{Lab 1.4:} Downlink handling and Class A operation
+\end{itemize}
+
+\vfill
+
+\noindent\rule{\textwidth}{0.4pt}
+\begin{center}
+\textit{USP Training Course 1 - Lab 1.1}\\
+\textit{Version 1.0 - 2025}
+\end{center}
+
+\end{document}

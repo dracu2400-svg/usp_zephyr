@@ -1,0 +1,552 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{tikz}
+
+% TikZ libraries
+\usetikzlibrary{shapes,arrows,positioning}
+
+% Code listing style
+\lstset{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=2
+}
+
+% Color boxes
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{objectivebox}{
+    colback=blue!5!white,
+    colframe=blue!75!black,
+    title=Lab Objectives,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{prereqbox}{
+    colback=yellow!5!white,
+    colframe=yellow!75!black,
+    title=Prerequisites,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{solutionbox}{
+    colback=green!5!white,
+    colframe=green!75!black,
+    title=Solution,
+    fonttitle=\bfseries,
+    breakable
+}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{USP Training Course 2}
+\rhead{Lab 2.1: Event-Driven Programming}
+\cfoot{\thepage}
+
+\title{
+    \textbf{Lab 2.1: Event-Driven Programming with LBM}\\
+    \large Course 2: LoRa Basics Modem Architecture
+}
+\author{USP Training Series}
+\date{}
+
+\begin{document}
+
+\mailtitle
+\thispagestyle{fancy}
+
+% ============================================================================
+\section{Lab Overview}
+% ============================================================================
+
+\begin{objectivebox}
+By the end of this lab, you will be able to:
+\begin{itemize}
+    \item Understand the LBM event-driven architecture
+    \item Implement event handlers for LoRaWAN events
+    \item Handle JOINED, TXDONE, DOWNDATA events
+    \item Process event queues correctly
+    \item Track application state based on modem events
+\end{itemize}
+\end{objectivebox}
+
+\vspace{0.5cm}
+
+\begin{prereqbox}
+\textbf{Required Knowledge:}
+\begin{itemize}
+    \item Completion of Lab 1.1 (Basic LoRaWAN Join)
+    \item Understanding of event-driven programming
+    \item Familiarity with LBM API
+\end{itemize}
+
+\vspace{0.3cm}
+
+\textbf{Hardware Required:}
+\begin{itemize}
+    \item Xiao nRF54L15 + LR1120 board
+    \item USB cable
+    \item LoRaWAN gateway in range
+\end{itemize}
+\end{prereqbox}
+
+% ============================================================================
+\section{Lab Duration}
+% ============================================================================
+
+\textbf{Estimated Time:} 60 minutes
+
+% ============================================================================
+\section{Background}
+% ============================================================================
+
+\subsection{LBM Event-Driven Architecture}
+
+LoRa Basics Modem (LBM) uses an event-driven architecture where the application responds to asynchronous events from the modem. This design:
+
+\begin{itemize}
+    \item Decouples application logic from modem timing
+    \item Enables low-power operation (sleep between events)
+    \item Simplifies handling of asynchronous LoRaWAN operations
+    \item Supports multiple concurrent operations
+\end{itemize}
+
+\subsection{Event Types}
+
+Common LBM events include:
+
+\begin{center}
+\begin{tabular}{|l|p{8cm}|}
+\hline
+\textbf{Event} & \textbf{Description} \\
+\hline
+JOINED & Device successfully joined network \\
+TXDONE & Uplink transmission completed \\
+DOWNDATA & Downlink data received \\
+UPLOAD\_DONE & File upload completed (FUOTA) \\
+LINK\_CHECK & Link check result available \\
+ALARM & Scheduled alarm triggered \\
+\hline
+\end{tabular}
+\end{center}
+
+% ============================================================================
+\section{Lab Instructions}
+% ============================================================================
+
+\subsection{Step 1: Initialize LBM Stack}
+
+Create a new application that uses LBM instead of Zephyr's native LoRaWAN stack.
+
+\subsection{Step 2: Implement Event Handler}
+
+Create an event handler function that processes all modem events in a loop.
+
+\subsection{Step 3: Handle JOIN Event}
+
+When JOINED event is received, initiate first uplink transmission.
+
+\subsection{Step 4: Handle TXDONE Event}
+
+Track transmission status (confirmed/unconfirmed, ACK received, etc.).
+
+\subsection{Step 5: Handle DOWNDATA Event}
+
+Process received downlink messages and extract payload.
+
+\subsection{Step 6: Build and Test}
+
+\begin{lstlisting}[language=bash]
+west build -b xiao_nrf54l15 .
+west flash
+\end{lstlisting}
+
+% ============================================================================
+\section{Solution}
+% ============================================================================
+
+\begin{solutionbox}
+
+\subsection{Complete Implementation}
+
+\begin{lstlisting}
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <smtc_modem_api.h>
+#include <smtc_board.h>
+
+LOG_MODULE_REGISTER(lab_2_1, LOG_LEVEL_INF);
+
+/* LoRaWAN Credentials */
+#define LORAWAN_DEV_EUI    { 0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x01 }
+#define LORAWAN_JOIN_EUI   { 0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x00 }
+#define LORAWAN_APP_KEY    { 0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x00, 0x00 }
+
+/* Application state */
+static struct {
+    bool joined;
+    uint32_t uplink_count;
+    uint32_t downlink_count;
+    int16_t last_rssi;
+    int8_t last_snr;
+} app_state = {0};
+
+/**
+ * @brief Handle JOINED event
+ */
+static void handle_joined_event(void)
+{
+    LOG_INF("===========================================");
+    LOG_INF("JOINED EVENT: Network joined successfully");
+    LOG_INF("===========================================");
+
+    app_state.joined = true;
+
+    /* Get and display DevAddr */
+    uint32_t dev_addr;
+    smtc_modem_get_dev_addr(0, &dev_addr);
+    LOG_INF("DevAddr: 0x%08X", dev_addr);
+
+    /* Send first uplink */
+    uint8_t payload[] = "Hello from LBM!";
+    smtc_modem_request_uplink(0, 2, false,
+                              payload, sizeof(payload));
+    LOG_INF("First uplink queued");
+}
+
+/**
+ * @brief Handle TXDONE event
+ */
+static void handle_txdone_event(smtc_modem_event_t *event)
+{
+    app_state.uplink_count++;
+
+    LOG_INF("TXDONE EVENT #%u:", app_state.uplink_count);
+    LOG_INF("  Status: %s",
+            event->event_data.txdone.status ==
+            SMTC_MODEM_EVENT_TXDONE_CONFIRMED
+                ? "CONFIRMED" : "UNCONFIRMED");
+
+    if (event->event_data.txdone.status ==
+        SMTC_MODEM_EVENT_TXDONE_CONFIRMED) {
+        LOG_INF("  ACK received");
+    }
+
+    /* Schedule next uplink */
+    k_work_schedule(&uplink_work, K_SECONDS(60));
+}
+
+/**
+ * @brief Handle DOWNDATA event
+ */
+static void handle_downdata_event(smtc_modem_event_t *event)
+{
+    uint8_t rx_payload[255];
+    uint8_t rx_payload_size;
+    smtc_modem_dl_metadata_t rx_metadata;
+
+    app_state.downlink_count++;
+
+    LOG_INF("DOWNDATA EVENT #%u:", app_state.downlink_count);
+
+    /* Get downlink data */
+    smtc_modem_get_downlink_data(
+        0, rx_payload, &rx_payload_size,
+        &rx_metadata);
+
+    LOG_INF("  Port: %d", rx_metadata.fport);
+    LOG_INF("  RSSI: %d dBm", rx_metadata.rssi);
+    LOG_INF("  SNR: %d dB", rx_metadata.snr);
+    LOG_INF("  Length: %d bytes", rx_payload_size);
+
+    if (rx_payload_size > 0) {
+        LOG_HEXDUMP_INF(rx_payload, rx_payload_size,
+                       "Payload");
+
+        /* Store link quality */
+        app_state.last_rssi = rx_metadata.rssi;
+        app_state.last_snr = rx_metadata.snr;
+    }
+}
+
+/**
+ * @brief Main event processing loop
+ */
+static void process_modem_events(void)
+{
+    smtc_modem_event_t event;
+    uint8_t pending_events;
+
+    /* Process all pending events */
+    while (smtc_modem_get_event(&event, &pending_events)
+           == SMTC_MODEM_RC_OK) {
+
+        LOG_DBG("Event received: type=%d, pending=%d",
+                event.event_type, pending_events);
+
+        switch (event.event_type) {
+        case SMTC_MODEM_EVENT_RESET:
+            LOG_INF("RESET EVENT: Modem reset");
+            break;
+
+        case SMTC_MODEM_EVENT_ALARM:
+            LOG_INF("ALARM EVENT: Timer expired");
+            break;
+
+        case SMTC_MODEM_EVENT_JOINED:
+            handle_joined_event();
+            break;
+
+        case SMTC_MODEM_EVENT_TXDONE:
+            handle_txdone_event(&event);
+            break;
+
+        case SMTC_MODEM_EVENT_DOWNDATA:
+            handle_downdata_event(&event);
+            break;
+
+        case SMTC_MODEM_EVENT_JOINFAIL:
+            LOG_ERR("JOIN FAIL EVENT");
+            /* Retry join */
+            k_work_schedule(&join_work, K_SECONDS(10));
+            break;
+
+        case SMTC_MODEM_EVENT_LINK_CHECK:
+            LOG_INF("LINK CHECK EVENT:");
+            LOG_INF("  Margin: %d dB",
+                    event.event_data.link_check.margin);
+            LOG_INF("  Gateways: %d",
+                    event.event_data.link_check.gw_cnt);
+            break;
+
+        case SMTC_MODEM_EVENT_MUTE:
+            LOG_WRN("MUTE EVENT: Device muted by network");
+            break;
+
+        default:
+            LOG_WRN("Unhandled event: %d",
+                    event.event_type);
+            break;
+        }
+    }
+}
+
+/* Work queue for periodic uplinks */
+static void uplink_work_handler(struct k_work *work)
+{
+    if (!app_state.joined) {
+        LOG_WRN("Not joined, skipping uplink");
+        return;
+    }
+
+    uint8_t payload[32];
+    int len = snprintf(payload, sizeof(payload),
+                      "Uplink #%u", app_state.uplink_count + 1);
+
+    smtc_modem_request_uplink(0, 2, false, payload, len);
+    LOG_INF("Uplink queued: %s", payload);
+}
+
+K_WORK_DELAYABLE_DEFINE(uplink_work, uplink_work_handler);
+
+/* Work queue for join retry */
+static void join_work_handler(struct k_work *work)
+{
+    LOG_INF("Retrying join...");
+    smtc_modem_join_network(0);
+}
+
+K_WORK_DELAYABLE_DEFINE(join_work, join_work_handler);
+
+int main(void)
+{
+    int ret;
+
+    LOG_INF("==============================================");
+    LOG_INF("Lab 2.1: Event-Driven Programming with LBM");
+    LOG_INF("==============================================");
+
+    /* Initialize board-specific hardware */
+    smtc_board_init();
+
+    /* Initialize modem */
+    ret = smtc_modem_init();
+    if (ret != SMTC_MODEM_RC_OK) {
+        LOG_ERR("Modem init failed: %d", ret);
+        return -1;
+    }
+
+    LOG_INF("Modem initialized");
+
+    /* Set credentials */
+    uint8_t dev_eui[] = LORAWAN_DEV_EUI;
+    uint8_t join_eui[] = LORAWAN_JOIN_EUI;
+    uint8_t app_key[] = LORAWAN_APP_KEY;
+
+    smtc_modem_set_deveui(0, dev_eui);
+    smtc_modem_set_joineui(0, join_eui);
+    smtc_modem_set_nwkkey(0, app_key);
+
+    /* Set region */
+    smtc_modem_set_region(0, SMTC_MODEM_REGION_EU_868);
+
+    LOG_INF("Credentials configured");
+
+    /* Start join procedure */
+    LOG_INF("Starting OTAA join...");
+    ret = smtc_modem_join_network(0);
+    if (ret != SMTC_MODEM_RC_OK) {
+        LOG_ERR("Join failed: %d", ret);
+        return -1;
+    }
+
+    /* Main event loop */
+    LOG_INF("Entering event loop");
+
+    while (1) {
+        /* Process modem events */
+        process_modem_events();
+
+        /* Run modem engine */
+        smtc_modem_run_engine();
+
+        /* Sleep until next event */
+        k_sleep(K_MSEC(100));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{CMakeLists.txt}
+
+\begin{lstlisting}[language=bash]
+cmake_minimum_required(VERSION 3.20.0)
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(lab_2_1)
+
+target_sources(app PRIVATE src/main.c)
+
+# Include LBM library
+target_link_libraries(app PRIVATE lora_basics_modem)
+\end{lstlisting}
+
+\subsection{prj.conf}
+
+\begin{lstlisting}[language=bash]
+# LBM Configuration
+CONFIG_LORA_BASICS_MODEM=y
+CONFIG_LBM_REGION_EU868=y
+
+# Logging
+CONFIG_LOG=y
+CONFIG_LBM_LOG_LEVEL_DBG=y
+CONFIG_LOG_BUFFER_SIZE=4096
+
+# Stack sizes
+CONFIG_MAIN_STACK_SIZE=4096
+CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE=2048
+\end{lstlisting}
+
+\end{solutionbox}
+
+% ============================================================================
+\section{Expected Output}
+% ============================================================================
+
+\begin{lstlisting}
+==============================================
+Lab 2.1: Event-Driven Programming with LBM
+==============================================
+[00:00:00.100] <inf> lab_2_1: Modem initialized
+[00:00:00.105] <inf> lab_2_1: Credentials configured
+[00:00:00.110] <inf> lab_2_1: Starting OTAA join...
+[00:00:00.115] <inf> lab_2_1: Entering event loop
+[00:00:05.234] <inf> lab_2_1: ===================
+[00:00:05.235] <inf> lab_2_1: JOINED EVENT
+[00:00:05.236] <inf> lab_2_1: ===================
+[00:00:05.237] <inf> lab_2_1: DevAddr: 0x260B1234
+[00:00:05.238] <inf> lab_2_1: First uplink queued
+[00:00:06.456] <inf> lab_2_1: TXDONE EVENT #1:
+[00:00:06.457] <inf> lab_2_1:   Status: UNCONFIRMED
+[00:01:06.457] <inf> lab_2_1: Uplink queued: Uplink #2
+[00:01:07.678] <inf> lab_2_1: TXDONE EVENT #2:
+[00:01:07.679] <inf> lab_2_1:   Status: UNCONFIRMED
+[00:01:08.123] <inf> lab_2_1: DOWNDATA EVENT #1:
+[00:01:08.124] <inf> lab_2_1:   Port: 2
+[00:01:08.125] <inf> lab_2_1:   RSSI: -45 dBm
+[00:01:08.126] <inf> lab_2_1:   SNR: 10 dB
+[00:01:08.127] <inf> lab_2_1:   Length: 4 bytes
+\end{lstlisting}
+
+% ============================================================================
+\section{Deliverables}
+% ============================================================================
+
+\begin{enumerate}[itemsep=10pt]
+    \item \textbf{Source Code} with event handlers for all required events
+    \item \textbf{Serial Log} showing successful event processing
+    \item \textbf{Event Timing Analysis}
+    \begin{itemize}
+        \item Time from join to first TXDONE
+        \item Average time between uplinks
+        \item Response time to downlinks
+    \end{itemize}
+    \item \textbf{Lab Report} describing event flow and state transitions
+\end{enumerate}
+
+% ============================================================================
+\section{Additional Challenges}
+% ============================================================================
+
+\subsection{Challenge 1: Event Statistics}
+
+Track statistics for each event type:
+\begin{itemize}
+    \item Count of each event received
+    \item Average time between events
+    \item Display summary every 10 minutes
+\end{itemize}
+
+\subsection{Challenge 2: Custom Event Actions}
+
+Implement custom actions based on link quality:
+\begin{itemize}
+    \item If RSSI < -100 dBm, increase SF
+    \item If SNR < 0 dB, request link check
+    \item Log quality trends
+\end{itemize}
+
+\vfill
+
+\noindent\rule{\textwidth}{0.4pt}
+\begin{center}
+\textit{USP Training Course 2 - Lab 2.1}\\
+\textit{Version 1.0 - 2025}
+\end{center}
+
+\end{document}
