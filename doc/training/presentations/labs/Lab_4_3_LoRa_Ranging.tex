@@ -1,0 +1,124 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+
+\lstset{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=2
+}
+
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{objectivebox}{colback=blue!5!white,colframe=blue!75!black,title=Lab Objectives,fonttitle=\bfseries}
+\newtcolorbox{prereqbox}{colback=yellow!5!white,colframe=yellow!75!black,title=Prerequisites,fonttitle=\bfseries}
+\newtcolorbox{solutionbox}{colback=green!5!white,colframe=green!75!black,title=Solution,fonttitle=\bfseries,breakable}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{USP Training Course 4}
+\rhead{Lab 4.3: LoRa Ranging}
+\cfoot{\thepage}
+
+\title{\textbf{Lab 4.3: LoRa Ranging}\\
+\large Course 4: Multiprotocol Development}
+\author{USP Training Series}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Lab Overview}
+
+\begin{objectivebox}
+By the end of this lab, you will be able to:
+\begin{itemize}
+    \item Understand LoRa Ranging concepts
+    \item Implement working solution
+    \item Test and verify functionality
+\end{itemize}
+\end{objectivebox}
+
+\begin{prereqbox}
+\textbf{Required:} Completion of previous labs\\
+\textbf{Hardware:} Xiao nRF54L15 + LR1120 board
+\end{prereqbox}
+
+\section{Lab Duration}
+\textbf{Estimated Time:} 60 minutes
+
+\section{Background}
+
+This lab focuses on LoRa Ranging. Refer to Course 4 presentation for theoretical background.
+
+\section{Lab Instructions}
+
+\subsection{Step 1: Setup}
+Configure your development environment for this lab.
+
+\subsection{Step 2: Implementation}
+Follow the solution code below to implement the required functionality.
+
+\subsection{Step 3: Build and Test}
+\begin{lstlisting}[language=bash]
+west build -b xiao_nrf54l15 .
+west flash
+\end{lstlisting}
+
+\section{Solution}
+
+\begin{solutionbox}
+\textbf{Note:} Complete solution code is available in the Lab\_Solutions.md document, Section 4.3.
+
+Key implementation points:
+\begin{itemize}
+    \item Refer to Lab\_Solutions.md for full working code
+    \item All build configurations included
+    \item Expected output documented
+    \item Troubleshooting guide provided
+\end{itemize}
+
+See \texttt{doc/training/Lab\_Solutions.md} for complete implementation details.
+\end{solutionbox}
+
+\section{Expected Output}
+
+Refer to Lab\_Solutions.md Section 4.3 for expected serial console output.
+
+\section{Deliverables}
+
+\begin{enumerate}[itemsep=10pt]
+    \item Working source code implementation
+    \item Serial console log showing functionality
+    \item Lab report with observations
+    \item Screenshots from network server (if applicable)
+\end{enumerate}
+
+\section{Troubleshooting}
+
+Common issues and solutions are documented in Lab\_Solutions.md.
+
+\vfill
+\noindent\rule{\textwidth}{0.4pt}
+\begin{center}
+\textit{USP Training Course 4 - Lab 4.3}\\
+\textit{Version 1.0 - 2025}
+\end{center}
+
+\end{document}

@@ -1,0 +1,394 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+
+% Code listing style
+\lstset{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=2
+}
+
+% Color boxes
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{objectivebox}{colback=blue!5!white,colframe=blue!75!black,title=Lab Objectives,fonttitle=\bfseries}
+\newtcolorbox{prereqbox}{colback=yellow!5!white,colframe=yellow!75!black,title=Prerequisites,fonttitle=\bfseries}
+\newtcolorbox{solutionbox}{colback=green!5!white,colframe=green!75!black,title=Solution,fonttitle=\bfseries,breakable}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{USP Training Course 1}
+\rhead{Lab 1.2: Send and Receive Messages}
+\cfoot{\thepage}
+
+\title{\textbf{Lab 1.2: Send and Receive Messages}\\
+\large Course 1: LoRa \& LoRaWAN Fundamentals}
+\author{USP Training Series}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Lab Overview}
+
+\begin{objectivebox}
+By the end of this lab, you will be able to:
+\begin{itemize}
+    \item Send unconfirmed uplink messages
+    \item Format and encode payloads
+    \item Receive and decode downlink messages
+    \item Understand FPort usage
+    \item Monitor message delivery in network server
+\end{itemize}
+\end{objectivebox}
+
+\begin{prereqbox}
+\textbf{Required:} Completion of Lab 1.1 (Basic LoRaWAN Join)\\
+\textbf{Hardware:} Xiao nRF54L15 + LR1120 board
+\end{prereqbox}
+
+\section{Lab Duration}
+\textbf{Estimated Time:} 45 minutes
+
+\section{Background}
+
+\subsection{LoRaWAN Ports}
+FPort (Frame Port) identifies the application endpoint:
+\begin{itemize}
+    \item Port 0: Reserved for MAC commands
+    \item Ports 1-223: Application data
+    \item Port 224-255: Reserved for future use
+\end{itemize}
+
+\subsection{Payload Encoding}
+Best practices for payload encoding:
+\begin{itemize}
+    \item Keep payloads small (< 51 bytes for SF12, < 222 bytes for SF7)
+    \item Use binary encoding instead of ASCII
+    \item Consider byte order (big-endian vs little-endian)
+    \item Use The Things Network payload formatters for decoding
+\end{itemize}
+
+\section{Lab Instructions}
+
+\subsection{Step 1: Implement Uplink Function}
+Create a function to send sensor data as unconfirmed uplink.
+
+\subsection{Step 2: Encode Sensor Data}
+Pack temperature, humidity, and battery voltage into compact payload.
+
+\subsection{Step 3: Send Periodic Uplinks}
+Use Zephyr timers to send data every 60 seconds.
+
+\subsection{Step 4: Receive Downlinks}
+Implement callback to handle received downlink messages.
+
+\subsection{Step 5: Test Communication}
+Build, flash, and verify bidirectional communication.
+
+\section{Solution}
+
+\begin{solutionbox}
+\subsection{Complete Implementation}
+
+\begin{lstlisting}
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/lorawan/lorawan.h>
+#include <zephyr/random/random.h>
+
+LOG_MODULE_REGISTER(lab_1_2, LOG_LEVEL_INF);
+
+/* Simulated sensor readings */
+static int16_t get_temperature(void)
+{
+    /* Simulate temperature: 20.5°C = 205 (x10) */
+    return 205 + (sys_rand32_get() % 100) - 50;
+}
+
+static uint8_t get_humidity(void)
+{
+    /* Simulate humidity: 60% */
+    return 60 + (sys_rand32_get() % 40);
+}
+
+static uint16_t get_battery_voltage(void)
+{
+    /* Simulate battery: 3.6V = 3600mV */
+    return 3600 + (sys_rand32_get() % 200);
+}
+
+/* Encode sensor data into compact payload */
+static int encode_sensor_data(uint8_t *payload)
+{
+    int16_t temp = get_temperature();
+    uint8_t hum = get_humidity();
+    uint16_t vbat = get_battery_voltage();
+
+    /* Payload format (6 bytes):
+     * [0-1]: Temperature (int16, x10, big-endian)
+     * [2]:   Humidity (uint8, %)
+     * [3-4]: Battery voltage (uint16, mV, big-endian)
+     * [5]:   Sequence counter
+     */
+    static uint8_t seq = 0;
+
+    payload[0] = (temp >> 8) & 0xFF;
+    payload[1] = temp & 0xFF;
+    payload[2] = hum;
+    payload[3] = (vbat >> 8) & 0xFF;
+    payload[4] = vbat & 0xFF;
+    payload[5] = seq++;
+
+    LOG_INF("Encoded: Temp=%.1f°C, Hum=%d%%, Vbat=%dmV",
+            temp / 10.0, hum, vbat);
+
+    return 6;
+}
+
+/* Send uplink message */
+static void send_uplink(void)
+{
+    uint8_t payload[6];
+    int len;
+    int ret;
+
+    len = encode_sensor_data(payload);
+
+    ret = lorawan_send(2, payload, len,
+                       LORAWAN_MSG_UNCONFIRMED);
+    if (ret < 0) {
+        LOG_ERR("Send failed: %d", ret);
+    } else {
+        LOG_INF("Uplink sent (%d bytes)", len);
+        LOG_HEXDUMP_INF(payload, len, "Payload");
+    }
+}
+
+/* Downlink callback */
+static void dl_callback(uint8_t port, bool data_pending,
+                       int16_t rssi, int8_t snr,
+                       uint8_t len, const uint8_t *data)
+{
+    LOG_INF("========================================");
+    LOG_INF("DOWNLINK RECEIVED");
+    LOG_INF("========================================");
+    LOG_INF("Port: %d", port);
+    LOG_INF("RSSI: %d dBm", rssi);
+    LOG_INF("SNR: %d dB", snr);
+    LOG_INF("Pending: %s", data_pending ? "Yes" : "No");
+    LOG_INF("Length: %d bytes", len);
+
+    if (len > 0) {
+        LOG_HEXDUMP_INF(data, len, "Data");
+
+        /* Example: Parse simple command */
+        if (port == 2 && len >= 1) {
+            switch (data[0]) {
+            case 0x01:
+                LOG_INF("Command: LED ON");
+                break;
+            case 0x00:
+                LOG_INF("Command: LED OFF");
+                break;
+            case 0xFF:
+                LOG_INF("Command: Reset");
+                break;
+            default:
+                LOG_INF("Command: Unknown (0x%02X)", data[0]);
+                break;
+            }
+        }
+    }
+}
+
+/* Uplink timer */
+static void uplink_timer_handler(struct k_timer *timer)
+{
+    send_uplink();
+}
+
+K_TIMER_DEFINE(uplink_timer, uplink_timer_handler, NULL);
+
+int main(void)
+{
+    int ret;
+    const struct device *lora_dev;
+
+    LOG_INF("==============================================");
+    LOG_INF("Lab 1.2: Send and Receive Messages");
+    LOG_INF("==============================================");
+
+    lora_dev = DEVICE_DT_GET(DT_ALIAS(lora0));
+    if (!device_is_ready(lora_dev)) {
+        LOG_ERR("LoRa device not ready");
+        return -1;
+    }
+
+    ret = lorawan_start();
+    if (ret < 0) {
+        LOG_ERR("Failed to start LoRaWAN: %d", ret);
+        return ret;
+    }
+
+    /* Register downlink callback */
+    struct lorawan_downlink_cb downlink_cb = {
+        .port = LW_RECV_PORT_ANY,
+        .cb = dl_callback
+    };
+    lorawan_register_downlink_callback(&downlink_cb);
+
+    /* Join network */
+    struct lorawan_join_config join_cfg = {
+        .mode = LORAWAN_ACT_OTAA,
+        .dev_eui = (uint8_t[]){0x00,0x00,0x00,0x00,
+                               0x00,0x00,0x00,0x01},
+        .otaa = {
+            .join_eui = (uint8_t[]){0x00,0x00,0x00,0x00,
+                                     0x00,0x00,0x00,0x00},
+            .app_key = (uint8_t[]){0x00,0x00,0x00,0x00,
+                                   0x00,0x00,0x00,0x00,
+                                   0x00,0x00,0x00,0x00,
+                                   0x00,0x00,0x00,0x00},
+            .nwk_key = (uint8_t[]){0x00,0x00,0x00,0x00,
+                                   0x00,0x00,0x00,0x00,
+                                   0x00,0x00,0x00,0x00,
+                                   0x00,0x00,0x00,0x00}
+        }
+    };
+
+    LOG_INF("Starting join procedure...");
+    ret = lorawan_join(&join_cfg);
+    if (ret < 0) {
+        LOG_ERR("Join failed: %d", ret);
+        return ret;
+    }
+
+    /* Wait for join */
+    while (!lorawan_is_joined()) {
+        k_sleep(K_SECONDS(1));
+    }
+
+    LOG_INF("Network joined successfully!");
+
+    /* Send first uplink immediately */
+    send_uplink();
+
+    /* Start periodic uplinks (60 seconds) */
+    k_timer_start(&uplink_timer, K_SECONDS(60), K_SECONDS(60));
+
+    LOG_INF("Periodic uplinks started (60s interval)");
+
+    /* Main loop */
+    while (1) {
+        k_sleep(K_SECONDS(10));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{TTN Payload Decoder}
+
+Add this decoder function in your TTN application:
+
+\begin{lstlisting}[language=JavaScript]
+function decodeUplink(input) {
+    var data = {};
+
+    // Decode temperature (bytes 0-1, int16, x10)
+    var temp_raw = (input.bytes[0] << 8) | input.bytes[1];
+    if (temp_raw > 32767) temp_raw -= 65536;  // Handle negative
+    data.temperature = temp_raw / 10.0;
+
+    // Decode humidity (byte 2, uint8)
+    data.humidity = input.bytes[2];
+
+    // Decode battery voltage (bytes 3-4, uint16, mV)
+    data.battery_voltage = ((input.bytes[3] << 8) |
+                            input.bytes[4]) / 1000.0;
+
+    // Sequence counter (byte 5)
+    data.sequence = input.bytes[5];
+
+    return {
+        data: data,
+        warnings: [],
+        errors: []
+    };
+}
+\end{lstlisting}
+
+\end{solutionbox}
+
+\section{Expected Output}
+
+\begin{lstlisting}
+[00:00:10.570] <inf> lab_1_2: Network joined successfully!
+[00:00:10.571] <inf> lab_1_2: Encoded: Temp=20.7°C, Hum=65%, Vbat=3625mV
+[00:00:10.572] <inf> lab_1_2: Uplink sent (6 bytes)
+[00:00:10.573] <inf> lab_1_2: Payload: 00 cf 41 0e 29 00
+[00:01:10.571] <inf> lab_1_2: Encoded: Temp=21.2°C, Hum=62%, Vbat=3638mV
+[00:01:10.572] <inf> lab_1_2: Uplink sent (6 bytes)
+[00:01:11.234] <inf> lab_1_2: ========================================
+[00:01:11.235] <inf> lab_1_2: DOWNLINK RECEIVED
+[00:01:11.236] <inf> lab_1_2: ========================================
+[00:01:11.237] <inf> lab_1_2: Port: 2
+[00:01:11.238] <inf> lab_1_2: RSSI: -52 dBm
+[00:01:11.239] <inf> lab_1_2: SNR: 9 dB
+[00:01:11.240] <inf> lab_1_2: Length: 1 bytes
+[00:01:11.241] <inf> lab_1_2: Data: 01
+[00:01:11.242] <inf> lab_1_2: Command: LED ON
+\end{lstlisting}
+
+\section{Deliverables}
+
+\begin{enumerate}[itemsep=10pt]
+    \item Source code with uplink/downlink implementation
+    \item Serial log showing bidirectional communication
+    \item TTN console screenshot with decoded payload
+    \item Test downlink from TTN showing device receives it
+\end{enumerate}
+
+\section{Additional Challenges}
+
+\subsection{Challenge 1: Payload Compression}
+Reduce payload to 4 bytes using:
+\begin{itemize}
+    \item Temperature: 1 byte (range -40 to +85°C)
+    \item Humidity: 1 byte (0-100%)
+    \item Battery: 1 byte (2.0V to 4.2V)
+    \item Counter: 1 byte
+\end{itemize}
+
+\subsection{Challenge 2: Downlink Actuator}
+Control actual LED based on downlink commands.
+
+\vfill
+\noindent\rule{\textwidth}{0.4pt}
+\begin{center}
+\textit{USP Training Course 1 - Lab 1.2}\\
+\textit{Version 1.0 - 2025}
+\end{center}
+
+\end{document}
