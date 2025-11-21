@@ -229,7 +229,7 @@ Device Tree (DT) is a hardware description format used by Zephyr to configure:
         freq-error-hz = <0>;
     };
 };
-\end{lstlisting>
+\end{lstlisting}
 \end{frame}
 
 \begin{frame}[fragile]{Device Tree Overlays}
@@ -346,7 +346,7 @@ Overlays allow application-specific modifications without changing base board de
 \begin{itemize}
     \item Spectrum analyzer
     \item RF power meter
-    \item 50Ω dummy load
+    \item 50$\Omega$ dummy load
     \item SMA cables
     \item RF attenuators (20-30 dB)
 \end{itemize}
@@ -440,7 +440,7 @@ void tx_power_calibration_mode(void) {
     \item PCB losses: -0.5 dB
     \item Matching network: -0.8 dB
     \item Connector: -0.2 dB
-    \item \textbf{Total: -1.5 dB} ✓
+    \item \textbf{Total: -1.5 dB} $\checkmark$
 \end{itemize}
 
 \vspace{0.3cm}
@@ -479,7 +479,7 @@ Add \texttt{tx-power-offset = <-2>;} to compensate\\
 Now when application requests +14 dBm, radio will be set to +16 dBm to compensate for -2 dB losses.
 \end{frame}
 
-\begin{frame}{Frequency Accuracy Calibration}
+\begin{frame}[fragile]{Frequency Accuracy Calibration}
 \begin{columns}
 \column{0.5\textwidth}
 \textbf{Why Frequency Matters:}
@@ -625,7 +625,7 @@ int hal_timer_start(uint32_t timeout_ms,
                     void *context);
 
 int hal_timer_stop(void);
-\end{lstlisting>
+\end{lstlisting}
 \end{frame}
 
 \begin{frame}[fragile]{Example: Porting to STM32}
