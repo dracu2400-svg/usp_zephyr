@@ -1,0 +1,164 @@
+═══════════════════════════════════════════════════════════════
+  USP ZEPHYR TRAINING MATERIALS - BUILD SYSTEM
+  Author: Dr. ABDELMALEK OMAR
+  Copyright © 2025 Dr. ABDELMALEK OMAR. All rights reserved.
+═══════════════════════════════════════════════════════════════
+
+📁 DIRECTORY STRUCTURE
+─────────────────────────────────────────────────────────────
+presentations/
+├── Makefile                    # Automated build system
+├── README.md                   # Complete documentation
+├── lstconfig.tex               # Enhanced code formatting
+├── convert_pdf_to_pptx.py      # PDF to PowerPoint converter
+│
+├── Course_01_LoRa_LoRaWAN.tex  # 6 Course presentations
+├── Course_02_LBM_Architecture.tex
+├── Course_03_USP_RAC.tex
+├── Course_04_Multiprotocol.tex
+├── Course_05_Hardware_Integration.tex
+├── Course_06_Advanced_Features.tex
+│
+├── images/                     # Professional diagrams
+│   ├── diagrams/               # Class A/B/C timing diagrams
+│   │   ├── class_a_diagram.tex (TikZ source)
+│   │   ├── class_a_diagram.pdf (Vector graphics)
+│   │   ├── class_a_diagram.png (300 DPI raster)
+│   │   ├── class_b_diagram.tex
+│   │   ├── class_b_diagram.pdf
+│   │   ├── class_b_diagram.png
+│   │   ├── class_c_diagram.tex
+│   │   ├── class_c_diagram.pdf
+│   │   └── class_c_diagram.png
+│   │
+│   ├── architecture/           # System architecture diagrams
+│   │   ├── lorawan_architecture.tex
+│   │   └── lorawan_architecture.pdf
+│   │
+│   └── hardware/               # (Reserved for future hardware diagrams)
+│
+└── labs/                       # 23 Lab documents
+    ├── Lab_1.1_Basic_LoRaWAN_Join.tex
+    ├── Lab_1.2_Send_Receive_Messages.tex
+    └── ... (23 labs total)
+
+🔧 BUILD SYSTEM COMMANDS
+─────────────────────────────────────────────────────────────
+make                    Build everything (recommended)
+make courses            Build all 6 course presentations
+make labs               Build all 23 lab documents
+make diagrams           Generate all TikZ diagrams
+make pptx               Convert courses to PowerPoint
+make clean              Remove auxiliary files
+make cleanall           Remove ALL generated files
+make rebuild            Clean and rebuild from scratch
+make help               Show detailed help
+
+🎨 PROFESSIONAL DIAGRAMS (TikZ)
+─────────────────────────────────────────────────────────────
+✓ Class A Diagram - LoRaWAN Class A timing with RX windows
+✓ Class B Diagram - Beacon synchronization and ping slots
+✓ Class C Diagram - Continuous receive mode illustration
+✓ Architecture Diagram - Complete LoRaWAN network topology
+
+All diagrams are:
+  • Created with TikZ (LaTeX vector graphics)
+  • Fully editable source (.tex files)
+  • Generated in PDF (vector) and PNG (300 DPI)
+  • Professional quality for presentations and documentation
+
+📝 CODE FORMATTING IMPROVEMENTS
+─────────────────────────────────────────────────────────────
+✓ Larger font size for better visibility (small vs footnotesize)
+✓ Enhanced syntax highlighting
+✓ Light background for better contrast  
+✓ Professional frame style
+✓ Line numbers for reference
+✓ Configurable via lstconfig.tex
+
+📦 OUTPUT FORMATS
+─────────────────────────────────────────────────────────────
+PDF Format:
+  • High-quality vector graphics
+  • Optimized for printing and screen
+  • Embedded fonts
+  • File sizes: 200-400 KB per course
+
+PowerPoint (PPTX):
+  • Compatible with MS Office, LibreOffice, Google Slides
+  • Each slide as high-resolution image
+  • File sizes: 1.4-2.8 MB per course
+  • Generated via: make pptx
+
+🔄 REGENERATING DIAGRAMS
+─────────────────────────────────────────────────────────────
+To customize and regenerate diagrams:
+
+1. Edit TikZ source:
+   vi images/diagrams/class_a_diagram.tex
+
+2. Regenerate diagrams:
+   make diagrams
+
+3. Rebuild presentations:
+   make courses
+
+All diagrams will be automatically updated in the PDFs!
+
+📚 DOCUMENTATION
+─────────────────────────────────────────────────────────────
+README.md              Complete build instructions
+Makefile               Self-documenting build system
+Source .tex files      Inline LaTeX comments
+This file              Build system overview
+
+🎓 USAGE EXAMPLES
+─────────────────────────────────────────────────────────────
+# Build everything from scratch
+make rebuild
+
+# Build only courses (faster)
+make courses
+
+# Generate diagrams and build courses
+make diagrams courses
+
+# Create PowerPoint versions
+make courses pptx
+
+# Build specific course
+make Course_01_LoRa_LoRaWAN.pdf
+
+# Clean up temporary files
+make clean
+
+✅ QUALITY ASSURANCE
+─────────────────────────────────────────────────────────────
+✓ All 6 courses compile successfully
+✓ All 23 labs compile successfully
+✓ All diagrams generate correctly
+✓ PowerPoint conversion works
+✓ Build system tested and verified
+✓ Author attribution: Dr. ABDELMALEK OMAR
+✓ Copyright notices: © 2025 Dr. ABDELMALEK OMAR
+
+📄 FILES GENERATED
+─────────────────────────────────────────────────────────────
+Courses:    6 PDFs + 6 PPTX = 12 files
+Labs:       23 PDFs
+Diagrams:   3 PDFs + 3 PNGs + 1 architecture PDF = 7 files
+Total:      42 generated files
+
+💡 TIPS
+─────────────────────────────────────────────────────────────
+• Always run 'make diagrams' before 'make courses'
+• Use 'make clean' regularly to save disk space
+• Edit .tex source files, not PDFs
+• For code changes, modify \lstset in each course file
+• TikZ diagrams are fully customizable
+• See README.md for detailed instructions
+
+═══════════════════════════════════════════════════════════════
+For questions or issues, contact: Dr. ABDELMALEK OMAR
+Last Updated: 2025-11-21
+═══════════════════════════════════════════════════════════════
